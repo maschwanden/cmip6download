@@ -1,4 +1,6 @@
 import argparse
+import itertools
+from multiprocessing import Pool
 from pathlib import Path
 from pprint import pprint
 import sys
@@ -34,6 +36,13 @@ def get_queries(query_yaml_file):
     return core.CMIP6SearchQuery.create_from_yaml(query_yaml_file)
 
 
+def download_and_verify(i, data_item, reverify_data):
+    if data_item.verify_download(verify_checksum=reverify_data):
+        return
+    print(f'[{i}] Download {data_item.file_url}')
+    data_item.download(max_attempts=CONFIG.max_download_attempts)
+
+
 def main():
     reverify_data = False
     if helper.ask_user('Reverify all already downloaded files?'):
@@ -44,20 +53,24 @@ def main():
         sys.exit()
     searcher = core.CMIP6Searcher(CONFIG)
     data_items = []
-    for q in QUERIES:
-        print('-----------------')
-        print(q.name)
-        print('-----------------')
+    for q in reversed(sorted(QUERIES)):
         tmp_data_items = searcher.get_data_items(q)
+        print(f'Search for {q.name}: > {len(tmp_data_items)} < files found')
         data_items.extend(tmp_data_items)
 
     print(f'A total of {len(data_items)} files can be downloaded.')
     if helper.ask_user('Proceed?'):
-        for i, data_item in enumerate(data_items):
-            if data_item.verify_download(verify_checksum=reverify_data):
-                continue
-            print(f'[{i} / {len(data_items)}] Download {data_item.file_url}')
-            data_item.download(max_attempts=CONFIG.max_download_attempts)
+        with Pool(CONFIG.n_worker) as p:
+            data = list(zip(
+                list(range(len(data_items))), data_items,
+                [reverify_data] * len(data_items)))
+            p.starmap(download_and_verify, data, chunksize=1)
+
+        # for i, data_item in enumerate(data_items):
+        #     if data_item.verify_download(verify_checksum=reverify_data):
+        #         continue
+        #     print(f'[{i} / {len(data_items)}] Download {data_item.file_url}')
+        #     data_item.download(max_attempts=CONFIG.max_download_attempts)
 
 
 if __name__ == '__main__':

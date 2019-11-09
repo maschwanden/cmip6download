@@ -3,18 +3,21 @@ import logging
 from pathlib import Path
 
 
+LOGGER_LEVEL = logging.INFO
+
+
 def get_logger(logger_name):
     logger = logging.getLogger(logger_name)
     logger.propagate = False
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(LOGGER_LEVEL)
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(LOGGER_LEVEL)
     formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s')
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     file_handler = logging.FileHandler('error.log')
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(LOGGER_LEVEL)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     return logger

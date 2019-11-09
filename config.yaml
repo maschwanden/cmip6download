@@ -1,7 +1,8 @@
 cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
-base_data_dir: /export/data/aschwanden/cmip6
+base_data_dir: /export/data/model_data/cmip6
 
 max_download_attempts: 3
+n_worker: 10
 
 dir_filename_regex: 
 - tos: ^tos
@@ -13,6 +14,11 @@ dir_filename_regex:
   thetao: ^thetao
   areacella: ^areacella
   areacello: ^areacello
+  o2: ^o2
+  no3: ^no3
+  po4: ^po4
+  pH: ^pH
+  volcello: ^volcello
 
 - day: day_
   month: (mon_|monAnt|monGre)

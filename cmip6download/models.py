@@ -1,32 +1,29 @@
+import sys
+
 from peewee import Model as PModel
 from peewee import (
     SqliteDatabase, CharField, DateField, BooleanField, IntegerField,
     ForeignKeyField,
     )
 
+from cmip6download import CONFIG
 
-db = SqliteDatabase('cmip6data.db')
+print(CONFIG)
 
+sys.exit()
 
-class Model(PModel):
-    name = CharField()
-    institution = CharField()
-    project = CharField(default='CMIP6')
-
-
-class Scenario(PModel):
-    name = CharField()
+db = SqliteDatabase(sqlite_file)
 
 
-class ModelRun(PModel):
-    model = ForeignKeyField(Model, backref='model_runs')
-    scenario = ForeignKeyField(Scenario, backref='model_runs')
+class BaseModel(PModel):
+    class Meta:
+        database = db  # Use proxy for our DB.
 
 
-class SearchQuery(PModel):
+class SearchQuery(BaseModel):
     variable = CharField()
-    freequency = CharField()
-    model_run = ForeignKeyField(ModelRun, backref='model_runs')
+    frequency = CharField()
+    model_run = CharField()
     grid = CharField()
 
     data_type = CharField()
@@ -39,18 +36,22 @@ class SearchQuery(PModel):
         database = db
 
 
-class ModelRunFile(PModel):
-    filename = CharField()
+class ModelRunFile(BaseModel):
+    filename = CharField(unique=True)
     file_url = CharField()
-    remote_checksum = CharField()
-    remote_checksum_type = CharField()
-    local_dir = CharField()
     institution_id = CharField()
+
+    query = ForeignKeyField(SearchQuery, backref='model_run_files')
     remote_file_available = BooleanField(default=True)
+    local_file_available = BooleanField(default=False)
+
+    last_verified_date = DateField()
+    download_date = DateField()
 
     class Meta:
         database = db
 
 
+    db.create_tables([SearchQuery, ModelRunFile])
 
 
