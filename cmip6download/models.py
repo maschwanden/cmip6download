@@ -7,12 +7,10 @@ from peewee import (
     )
 
 from cmip6download import CONFIG
+from cmip6download.core import CMIP6SearchQuery
 
-print(CONFIG)
 
-sys.exit()
-
-db = SqliteDatabase(sqlite_file)
+db = SqliteDatabase(CONFIG.sqlite_db_file)
 
 
 class BaseModel(PModel):
@@ -31,6 +29,11 @@ class SearchQuery(BaseModel):
     latest = BooleanField()
     distrib = BooleanField()
     limit = IntegerField()
+
+    @classmethod
+    def create_from_cmip6searchquery(cls, cmip6searchquery):
+        sq = cmip6searchquery
+        return cls(variable=sq.variable, frequency=sq.frequency, )
 
     class Meta:
         database = db
@@ -52,6 +55,5 @@ class ModelRunFile(BaseModel):
         database = db
 
 
-    db.create_tables([SearchQuery, ModelRunFile])
-
-
+class Kaka(CMIP6SearchQuery, BaseModel):
+    pass

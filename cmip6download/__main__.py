@@ -8,6 +8,7 @@ import sys
 from cmip6download import CONFIG_DIR, CONFIG_FILE, CONFIG
 from cmip6download import get_queries
 from cmip6download import core, helper
+from cmip6download.gspread_upload import update_status
 
 
 parser = argparse.ArgumentParser(description='Download CMIP6.')
@@ -17,9 +18,21 @@ parser.add_argument(
 parser.add_argument(
     '--config_file', dest='config_file', default=None,
     help='YAML configuration file.')
+parser.add_argument(
+    '--verify', action='store_true', dest='verify', default=None)
+parser.add_argument(
+    '--noverify', action='store_false', dest='verify', default=None)
+parser.add_argument(
+    '--gosearch', action='store_true', default=False)
+parser.add_argument(
+    '--download', action='store_true', default=False)
 
 args = parser.parse_args()
 print(args.query_file, args.config_file)
+
+VERIFY = args.verify
+GOSEARCH = args.gosearch
+DOWNLOAD = args.download
 
 if args.config_file is not None:
     CONFIG_FILE = Path(args.config_file)
@@ -45,12 +58,18 @@ def download_and_verify(i, data_item, reverify_data):
 
 def main():
     reverify_data = False
-    if helper.ask_user('Reverify all already downloaded files?'):
-        reverify_data = True
+    if VERIFY is None:
+        if helper.ask_user('Reverify all already downloaded files?'):
+            reverify_data = True
+    else:
+        reverify_data = VERIFY
+
     pprint(QUERIES)
-    if not helper.ask_user('Search with the above queries for CMIP6 data?'):
-        print('Abort.')
-        sys.exit()
+    if not GOSEARCH:
+        if not helper.ask_user(
+                'Search with the above queries for CMIP6 data?'):
+            print('Abort.')
+            sys.exit()
     searcher = core.CMIP6Searcher(CONFIG)
     data_items = []
     for q in reversed(sorted(QUERIES)):
@@ -59,12 +78,19 @@ def main():
         data_items.extend(tmp_data_items)
 
     print(f'A total of {len(data_items)} files can be downloaded.')
-    if helper.ask_user('Proceed?'):
+    if DOWNLOAD:
+        proceed_download = True
+    else:
+        proceed_download = helper.ask_user('Proceed?')
+    if proceed_download:
         with Pool(CONFIG.n_worker) as p:
             data = list(zip(
                 list(range(len(data_items))), data_items,
                 [reverify_data] * len(data_items)))
             p.starmap(download_and_verify, data, chunksize=1)
+            print('Finished downloading...')
+
+        # update_status(data_items)
 
         # for i, data_item in enumerate(data_items):
         #     if data_item.verify_download(verify_checksum=reverify_data):

@@ -17,5 +17,3 @@ def get_queries(query_yaml_file):
 CONFIG_DIR = Path.home() / '.config/cmip6download/'
 CONFIG_FILE = CONFIG_DIR / 'config.yaml'
 CONFIG = get_config(CONFIG_FILE)
-SQLITE_FILE = CONFIG.sqlite_file or CONFIG_DIR / 'db.sqlite'
-DB = SqliteDatabase(SQLITE_FILE)

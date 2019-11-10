@@ -16,6 +16,7 @@ Last Updated October 2019
 
 """
 import dataclasses
+import datetime
 import hashlib
 import itertools
 import logging
@@ -112,10 +113,11 @@ class CMIP6DataItem:
     file_url: str
     remote_checksum: str
     remote_checksum_type: str
-    local_dir: Path
     institution_id: str
+    local_data_dir: Path
 
     remote_file_available: bool = True
+    download_date = None
 
     @property
     def local_file(self):
@@ -135,6 +137,23 @@ class CMIP6DataItem:
     def institution_filename_str(self):
         return f'[{self.institution_id}] {self.filename}'
 
+    @property
+    def local_dir(self):
+        metadata = self.get_metadata_from_filename()
+        subdir_names = [
+            metadata['variable_id'], metadata['table_id'],
+            metadata['experiment_id'], metadata['source_id'],
+            ]
+        return Path(self.local_data_dir).joinpath(*subdir_names)
+
+    def get_metadata_from_filename(self):
+        return dict(zip(
+            ['variable_id', 'table_id', 'source_id', 'experiment_id',
+            'member_id', 'grid_label', 'time_range'],
+            self.filename.split('.')[0].split('_'),
+            )
+        )
+
     def verify_download(self, verify_checksum=False):
         verified = True
         if self.local_file.exists():
@@ -145,19 +164,14 @@ class CMIP6DataItem:
         else:
             logger.debug(f'File does not exist locally.')
             verified = False
-
-        if verified:
-            logger.debug(f'Download of {self.file_url} successfully verified.')
-            return True
-        logger.info(f'Could not verify the download of {self.filename}.')
-        return False
+        return verified
 
     def _download_file(self):
         try:
             head = requests.head(
                 self.file_url, allow_redirects=True, verify=False,
-                timeout=HTTP_HEAD_TIMEOUT_TIME,
-                # auth=requests.auth.HTTPBasicAuth('aschiii', 'Xsw2&&nji9'),
+                timeout=HTTP_HEAD_TIMEOUT_TIME
+                # auth=requests.auth.HTTPBasicAuth('aschiii', 'Xsw2&&nji9')
                 )
             logger.debug(
                 f'Header retrieved with code {head.status_code}.')
@@ -195,6 +209,7 @@ class CMIP6DataItem:
             self._download_file()
             if self.verify_download(verify_checksum=True):
                 logger.info(f'Download of {self.filename} successfull.')
+                self.download_date = datetime.datetime.now()
                 return self.local_file
             else:
                 logger.info(f'Try to re-download... (attempt {attempt})')
@@ -260,55 +275,6 @@ class CMIP6Searcher:
             raise ValueError(f'No link for the file {doctag.title}')
         return file_url
 
-    def _get_local_dir_from_regex(self, filename):
-        """Return directory for a file determined on its name.
-
-        The base directory must be specified and addtionally one to
-        multiple of lists of tuples must be given containing the
-        pairs of directory name and a compile regex which is used
-        to check if it is contained in the filename.
-
-        Args:
-            filename (str): Name of the file for which the destination
-                directory must be determined.
-
-        """
-        tuples = list(itertools.product(*self.config.dir_filename_regex))
-        subdir_names = []
-        for levels in tuples:
-            tmp_subdir_names = [
-                name for name, regex in levels if regex.findall(str(filename))]
-            if len(tmp_subdir_names) > len(subdir_names):
-                subdir_names = tmp_subdir_names
-            if len(subdir_names) == len(self.config.dir_filename_regex):
-                break
-        if not subdir_names:
-            return self.config.base_data_dir
-        return Path(self.config.base_data_dir).joinpath(*subdir_names)
-
-    def _get_info_from_filename(self, filename):
-        element_names = [
-            'variable_id', 'table_id', 'source_id', 'experiment_id', 'member_id',
-            'grid_label', 'time_range']
-        elements = filename.split('.')[0].split('_')
-        element_dict = dict(zip(
-            element_names[:len(elements)], elements,
-            )
-        )
-        return element_dict
-
-    def _get_local_dir_from_template(self, filename):
-        info = self._get_info_from_filename(filename)
-        subdir_names = [
-            info['variable_id'], info['table_id'], info['experiment_id'],
-            info['source_id'],
-            ]
-        return Path(self.config.base_data_dir).joinpath(*subdir_names)
-
-    def _get_local_dir(self, filename):
-        return self._get_local_dir_from_template(filename)
-        # return self._get_local_dir_from_regex(filename)
-
     def get_data_items(self, query):
         """
         Searche for CMIP6 data and return information about this data.
@@ -340,14 +306,13 @@ class CMIP6Searcher:
             remote_checksum_type = str(doctag.find(
                 'arr', attrs={'name': 'checksum_type'}).str.string)
             file_url = self._get_http_file_url(doctag)
-            local_dir = self._get_local_dir(filename)
             data_items.append(CMIP6DataItem(
                 filename=filename,
                 file_url=file_url,
                 remote_checksum=remote_checksum,
                 remote_checksum_type=remote_checksum_type,
-                local_dir=local_dir,
-                institution_id=institution_id
+                institution_id=institution_id,
+                local_data_dir=self.config.base_data_dir,
                 ))
         logger.info(f'{len(data_items)} files found.')
         return data_items
