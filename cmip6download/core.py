@@ -15,13 +15,13 @@ Last Updated October 2019
 @author: Mathias Aschwanden (mathias.aschwanden@gmail.com)
 
 """
-import dataclasses
+from dataclasses import field, dataclass
 import datetime
 import hashlib
 import itertools
 import logging
 from pathlib import Path
-from pprint import pprint, pformat
+from pprint import pformat, pprint
 import re
 import shutil
 import sys
@@ -38,22 +38,75 @@ from cmip6download.config import CMIP6Config
 HTTP_HEAD_TIMEOUT_TIME = 120
 HTTP_BASE_TIMEOUT_TIME = 240
 HTTP_DOWNLOAD_TIMEOUT_TIME = 1200
+REQUESTS_CHUNK_SIZE = 128 * 1024
 
 logger = helper.get_logger(__file__)
 
 
-@dataclasses.dataclass
+METADATA_FILENAME_LIST = [
+    'variable_id',
+    'table_id',
+    'source_id',
+    'experiment_id',
+    'member_id',
+    'grid_label',
+    'time_range',
+    ]
+
+def get_local_dir(filename, local_data_dir):
+    metadata = get_metadata_from_filename(filename)
+    try:
+        subdir_names = [
+            metadata['variable_id'], metadata['table_id'],
+            metadata['experiment_id'], metadata['source_id'],
+            metadata['member_id'], metadata['grid_label'],
+            ]
+        return Path(local_data_dir).joinpath(*subdir_names)
+    except KeyError:
+        logger.debug(f'Could not retrieve local dir from given filename.')
+
+
+def get_metadata_from_filename(filename):
+    tmp = dict(
+        zip(METADATA_FILENAME_LIST,
+        filename.split('.')[0].split('_'),
+        )
+    )
+    tmp['filename'] = filename
+    return tmp
+
+
+def move_files_to_local_dir(files, local_data_dir):
+    for old_f in files:
+        if not old_f:
+            continue
+        old_f = Path(old_f)
+        local_dir = get_local_dir(old_f.name, local_data_dir)
+        if not local_dir:
+            continue
+        local_dir.mkdir(exist_ok=True, parents=True)
+        new_f = Path(local_dir / str(old_f.name))
+        if old_f != new_f:
+            logger.info(f'Move {old_f} to {new_f}.')
+            try:
+                shutil.move(str(old_f), str(new_f))
+            except FileNotFoundError:
+                logger.warning(f'FileNotFoundError: {old_f}')
+
+
+@dataclass
 class CMIP6SearchQuery:
-    variable: str
-    frequency: str = ""
-    experiment_id: str = ""
-    grid_label: str = ""
+    variable: list
+    frequency: list = None
+    experiment_id: list = None
+    grid_label: list = None
+    activity_id: list = None
 
     project: str = 'CMIP6'
     type: str = 'File'
-    replica: bool = True
-    latest: bool = True
-    distrib: bool = True
+    replica: bool = False
+    latest: bool = None # True
+    distrib: bool = None # True
     limit: int = 10000
 
     priority: int = 100
@@ -70,7 +123,6 @@ class CMIP6SearchQuery:
     def __lt__(self, other):
         return self.priority < other.priority
 
-
     @property
     def name(self):
         return (f'{self.frequency} {self.variable} '
@@ -79,17 +131,22 @@ class CMIP6SearchQuery:
     @classmethod
     def create_from_yaml(cls, yaml_file):
         data = yaml.load(open(yaml_file, 'r'), Loader=yaml.Loader)
-
         queries = []
+
         for query in data:
-            priority = query.get('priority', 100)
-            vars = query['variable']
-            freqs = query['frequency'] or [None]
-            exps = query['experiment_id'] or [None]
-            grids = query['grid_label'] or [None]
-            query_tuples = list(itertools.product(vars, freqs, exps, grids))
-            queries.extend([cls(*tup, priority=query.get('priority', 100))
-                for tup in query_tuples])
+            product_params = {}
+            kwargs = {}
+            for key, value in cls.__annotations__.items():
+                default_value = cls.__dataclass_fields__[key].default
+                res = query.get(key, default_value)
+                if value == list:
+                    if res is None:
+                        res = [None]
+                    product_params[key] = res
+                else:
+                    kwargs[key] = res
+            queries.extend([cls(**{**kwargs, **x})
+                for x in list(helper.dict_product(product_params))])
         return list(set(queries))
 
     @staticmethod
@@ -104,10 +161,10 @@ class CMIP6SearchQuery:
         return {para: self.__dict__[para] for para in [
             'variable', 'frequency', 'experiment_id',
             'grid_label', 'project', 'type', 'replica',
-            'latest', 'distrib', 'limit']}
+            'latest', 'distrib', 'limit', 'activity_id']}
 
 
-@dataclasses.dataclass
+@dataclass
 class CMIP6DataItem:
     filename: str
     file_url: str
@@ -116,8 +173,10 @@ class CMIP6DataItem:
     institution_id: str
     local_data_dir: Path
 
+    query_file: str = None
     remote_file_available: bool = True
-    download_date = None
+    download_date: str = None
+    download_successfull: bool = None
 
     @property
     def local_file(self):
@@ -139,20 +198,7 @@ class CMIP6DataItem:
 
     @property
     def local_dir(self):
-        metadata = self.get_metadata_from_filename()
-        subdir_names = [
-            metadata['variable_id'], metadata['table_id'],
-            metadata['experiment_id'], metadata['source_id'],
-            ]
-        return Path(self.local_data_dir).joinpath(*subdir_names)
-
-    def get_metadata_from_filename(self):
-        return dict(zip(
-            ['variable_id', 'table_id', 'source_id', 'experiment_id',
-            'member_id', 'grid_label', 'time_range'],
-            self.filename.split('.')[0].split('_'),
-            )
-        )
+        return get_local_dir(self.filename, self.local_data_dir)
 
     def verify_download(self, verify_checksum=False):
         verified = True
@@ -187,13 +233,15 @@ class CMIP6DataItem:
             self.remote_file_available = False
             return
 
-        r = requests.get(
-            self.file_url, allow_redirects=True, verify=False,
-            timeout=HTTP_DOWNLOAD_TIMEOUT_TIME)
-        if r.status_code == 404:
-            raise requests.HTTPError(404)
-        with open(self.local_file, 'wb') as f:
-            f.write(r.content)
+        with requests.get(self.file_url, allow_redirects=True, verify=False,
+                timeout=HTTP_DOWNLOAD_TIMEOUT_TIME, stream=True) as r:
+            if r.status_code == 404:
+                raise requests.HTTPError(404)
+            with open(self.local_file, 'wb') as f:
+                for chunk in r.iter_content(REQUESTS_CHUNK_SIZE):
+                    if not chunk:
+                        break
+                    f.write(chunk)
 
     def download(
             self, max_attempts=1, attempt=1, reverify_checksum=False,
@@ -238,12 +286,21 @@ class CMIP6Searcher:
         self.config = config
 
     @staticmethod
-    def _get_result_tag(url, query):
+    def get_request_url(base_url, query):
+        query = {key: value for key, value in query.items()
+                 if value is not None}
+        urlparts = list(urllib.parse.urlparse(base_url))
+        urlparts[4] = urllib.parse.urlencode(query)
+        return urllib.parse.urlunparse(urlparts)
+
+    @classmethod
+    def _get_result_tag(cls, base_url, query):
         """
         Download and return dataset info corresponding to given
         search parameters.
 
         Attrs:
+            base_url (str): Base URL for CMIP6 data search.
             query (CMIP6SearchQuery): CMIP6SearchQuery instance.
                 Paramters set on this instance are sent to ESGF REST
                 API to filter out the relevant datasets.
@@ -254,15 +311,17 @@ class CMIP6Searcher:
 
         """
         try:
+            url = cls.get_request_url(base_url, query.as_query_dict())
             r = requests.get(
-                url, params=query.as_query_dict(), timeout=HTTP_BASE_TIMEOUT_TIME,
+                url, timeout=HTTP_BASE_TIMEOUT_TIME,
                 # auth=requests.auth.HTTPBasicAuth('aschiii', 'Xsw2&&nji9'),
                 )
         except requests.exceptions.ReadTimeout as e:
-            print(f'Could not get list of downloadable files ({e}).')
+            logger.warning(f'Could not get list of downloadable files ({e}).')
         return BeautifulSoup(r.text, 'lxml').result
 
-    def _get_http_file_url(self, doctag):
+    @staticmethod
+    def _get_http_file_url(doctag):
         arr_url = doctag.find('arr', attrs={'name': 'url'})
         file_url = None
         for url_str in arr_url.find_all('str'):
@@ -274,6 +333,40 @@ class CMIP6Searcher:
         if file_url is None:
             raise ValueError(f'No link for the file {doctag.title}')
         return file_url
+
+    @classmethod
+    def _get_data_items_from_doctags(cls, doctags, base_data_dir):
+        return [cls._get_data_item_from_doctag(doctag, base_data_dir)
+                for doctag in doctags]
+
+    @classmethod
+    def _get_data_item_from_doctag(cls, doctag, base_data_dir):
+        filename = str(doctag.find('str', attrs={'name': 'title'}).string)
+        title_tag = doctag.find('str', attrs={'name': 'title'})
+        institution_id = str(title_tag.parent.find(
+                'arr', attrs={'name': 'institution_id'}).str.string)
+        try:
+            remote_checksum = str(doctag.find(
+                'arr', attrs={'name': 'checksum'}).str.string)
+        except Exception as e:
+            raise e
+        try:
+            remote_checksum_type = str(doctag.find(
+                'arr', attrs={'name': 'checksum_type'}).str.string)
+        except Exception as e:
+            raise e
+        try:
+            file_url = cls._get_http_file_url(doctag)
+        except:
+            file_url = None
+        return CMIP6DataItem(
+            filename=filename,
+            file_url=file_url,
+            remote_checksum=remote_checksum,
+            remote_checksum_type=remote_checksum_type,
+            institution_id=institution_id,
+            local_data_dir=base_data_dir,
+            )
 
     def get_data_items(self, query):
         """
@@ -293,26 +386,9 @@ class CMIP6Searcher:
         if not isinstance(query, CMIP6SearchQuery):
             logger.warning(
                 f'`query` must be of type dict but is of type {type(query)}.')
-
-        data_items = []
-        for doctag in self.__class__._get_result_tag(
-                self.config.cmip6restapi_url, query).find_all('doc'):
-            filename = str(doctag.find('str', attrs={'name': 'title'}).string)
-            title_tag = doctag.find('str', attrs={'name': 'title'})
-            institution_id = str(title_tag.parent.find(
-                    'arr', attrs={'name': 'institution_id'}).str.string)
-            remote_checksum = str(doctag.find(
-                'arr', attrs={'name': 'checksum'}).str.string)
-            remote_checksum_type = str(doctag.find(
-                'arr', attrs={'name': 'checksum_type'}).str.string)
-            file_url = self._get_http_file_url(doctag)
-            data_items.append(CMIP6DataItem(
-                filename=filename,
-                file_url=file_url,
-                remote_checksum=remote_checksum,
-                remote_checksum_type=remote_checksum_type,
-                institution_id=institution_id,
-                local_data_dir=self.config.base_data_dir,
-                ))
+        doctags = self._get_result_tag(
+                self.config.cmip6restapi_url, query).find_all('doc')
+        data_items = self.__class__._get_data_items_from_doctags(
+            doctags, self.config.base_data_dir)
         logger.info(f'{len(data_items)} files found.')
         return data_items

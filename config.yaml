@@ -1,8 +1,8 @@
 cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
 base_data_dir: /export/data/model_data/cmip6
 
-max_download_attempts: 3
+max_download_attempts: 1
 n_worker: 10
 
-google_credentials_file: gcreds.json
+google_credentials_file: /home/aschwanden/.config/cmip6download/gcreds.json
 google_sheet_path: cmip6download_status

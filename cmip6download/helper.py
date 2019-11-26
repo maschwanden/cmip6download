@@ -1,3 +1,4 @@
+from itertools import product
 import hashlib
 import logging
 from pathlib import Path
@@ -70,3 +71,9 @@ def remove_tmp_files(base_directory):
         for f in files:
             f.unlink()
             print(f'Deleted {f}.')
+
+
+def dict_product(d):
+    keys = d.keys()
+    for element in product(*d.values()):
+        yield dict(zip(keys, element))
