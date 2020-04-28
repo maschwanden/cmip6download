@@ -10,7 +10,6 @@ import sys
 from cmip6download import CONFIG_DIR, CONFIG_FILE, CONFIG
 from cmip6download import get_queries, get_config
 from cmip6download import core, helper
-from cmip6download import gspread_database
 
 
 parser = argparse.ArgumentParser(description='Download CMIP6.')
@@ -44,6 +43,7 @@ QUERY_FILE = Path(args.query_file)
 QUERIES = get_queries(QUERY_FILE)
 
 try:
+    from cmip6download import gspread_database
     GSPREAD_DB = gspread_database.GoogleDataItemDatabase(
         CONFIG.google_credentials_file, CONFIG.google_sheet_path)
     print(f'Connected to Gspread Database!')

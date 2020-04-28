@@ -1,9 +1,6 @@
 from pathlib import Path
 
-from peewee import SqliteDatabase
-
 from cmip6download import core, helper
-
 
 
 def get_config(config_file):

@@ -18,5 +18,8 @@ setuptools.setup(
     ],
     install_requires=[
         'requests',
+        'PyYAML',
+        'beautifulsoup4',
+        'lxml',
     ],
 )
