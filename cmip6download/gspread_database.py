@@ -3,6 +3,7 @@ import datetime
 import json
 from pathlib import Path
 import pprint
+import time
 
 import pandas as pd
 import gspread
@@ -11,51 +12,13 @@ from gspread_pandas import Spread, Client
 from oauth2client.service_account import ServiceAccountCredentials
 
 from cmip6download import core
+from cmip6download import helper
 
 
 creds_file = Path('/home/aschwanden/.config/cmip6download/gcreds.json')
-#Create scope
-# scope = ['https://spreadsheets.google.com/feeds']
-
-# create some credential using that scope and content of startup_funding.json
-# creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-#create gspread authorize using that credential
-# client = gspread.authorize(creds)
-#Now will can access our google sheets we call client.open on StartupName
-# sheet = client.open('startup_funding').sheet1
-# pp = pprint.PrettyPrinter()
-#Access all of the record inside that
-# result = sheet.get_all_record()
-
-
-
-# file_name = "http://stats.idre.ucla.edu/stat/data/binary.csv"
-# df = pd.read_csv(file_name)
-#
-# # This will ask to authenticate if you haven't done so before
-# spread = Spread('Example Spreadsheet')
-#
-# # Display available worksheets
-# spread.sheets
-#
-# # Save DataFrame to worksheet 'New Test Sheet', create it first if it doesn't exist
-# spread.df_to_sheet(df, index=False, sheet='New Test Sheet', start='A2', replace=True)
-# spread.update_cells('A1', 'A1', ['Created by:', spread.email])
-# print(spread)
-# # <gspread_pandas.client.Spread - User: '<example_user>@gmail.com', Spread: 'Example Spreadsheet', Sheet: 'New Test Sheet'>
-#
-# # You can now first instanciate a Client separately and query folders and
-# # instanciate other Spread objects by passing in the Client
-# client = Client()
-# # Assumming you have a dir called 'example dir' with sheets in it
-# available_sheets = client.find_spreadsheet_files_in_folders('example dir')
-# spreads = []
-# for sheet in available_sheets.get('example dir', []):
-#     spreads.append(Spread(sheet['id'], client=client))
-
 
 col_names = \
-    ['download_date'] + core.METADATA_FILENAME_LIST + \
+    ['download_date'] + helper.METADATA_FILENAME_LIST + \
     ['filename', 'query_file']
 
 
@@ -121,7 +84,12 @@ class GoogleDataItemDatabase:
 
     def df_to_sheet(self, name, df):
         self.open_sheet(name)
-        self.spread.df_to_sheet(df, index=False)
+        try:
+            self.spread.df_to_sheet(df, index=False)
+        except gspread.exceptions.APIError:
+            print('Probably the quota is exceeded! Wait for 2 min and try again...')
+            time.sleep(120)
+            self.spread.df_to_sheet(df, index=False)
         self.add_filter_to_sheet(name)
 
     def add_filter_to_sheet(self, name):
@@ -131,7 +99,7 @@ class GoogleDataItemDatabase:
     def _get_df_from_dataitems(self, data_items):
         data = {col: [] for col in self.COL_NAMES}
         for data_item in data_items:
-            tmp = core.get_metadata_from_filename(data_item.filename)
+            tmp = helper.get_metadata_from_filename(data_item.filename)
             tmp2 = dataclasses.asdict(data_item)
             for col in self.COL_NAMES:
                 if col in tmp.keys():

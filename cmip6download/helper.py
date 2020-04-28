@@ -6,6 +6,16 @@ from pathlib import Path
 
 LOGGER_LEVEL = logging.INFO
 
+METADATA_FILENAME_LIST = [
+    'variable_id',
+    'table_id',
+    'source_id',
+    'experiment_id',
+    'member_id',
+    'grid_label',
+    'time_range',
+    ]
+
 
 def get_logger(logger_name):
     logger = logging.getLogger(logger_name)
@@ -77,3 +87,44 @@ def dict_product(d):
     keys = d.keys()
     for element in product(*d.values()):
         yield dict(zip(keys, element))
+
+
+def get_local_dir(filename, local_data_dir):
+    metadata = get_metadata_from_filename(filename)
+    try:
+        subdir_names = [
+            metadata['variable_id'], metadata['table_id'],
+            metadata['experiment_id'], metadata['source_id'],
+            metadata['member_id'], metadata['grid_label'],
+            ]
+        return Path(local_data_dir).joinpath(*subdir_names)
+    except KeyError:
+        logger.debug(f'Could not retrieve local dir from given filename.')
+
+
+def get_metadata_from_filename(filename):
+    tmp = dict(
+        zip(METADATA_FILENAME_LIST,
+        filename.split('.')[0].split('_'),
+        )
+    )
+    tmp['filename'] = filename
+    return tmp
+
+
+def move_files_to_local_dir(files, local_data_dir):
+    for old_f in files:
+        if not old_f:
+            continue
+        old_f = Path(old_f)
+        local_dir = get_local_dir(old_f.name, local_data_dir)
+        if not local_dir:
+            continue
+        local_dir.mkdir(exist_ok=True, parents=True)
+        new_f = Path(local_dir / str(old_f.name))
+        if old_f != new_f:
+            logger.info(f'Move {old_f} to {new_f}.')
+            try:
+                shutil.move(str(old_f), str(new_f))
+            except FileNotFoundError:
+                logger.warning(f'FileNotFoundError: {old_f}')

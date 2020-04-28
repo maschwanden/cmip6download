@@ -10,7 +10,6 @@ import sys
 from cmip6download import CONFIG_DIR, CONFIG_FILE, CONFIG
 from cmip6download import get_queries, get_config
 from cmip6download import core, helper
-# from cmip6download.gspread_upload import update_status
 from cmip6download import gspread_database
 
 
