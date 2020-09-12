@@ -15,22 +15,13 @@ from cmip6download import core
 from cmip6download import helper
 
 
-creds_file = Path('/home/aschwanden/.config/cmip6download/gcreds.json')
-
-col_names = \
-    ['download_date'] + helper.METADATA_FILENAME_LIST + \
-    ['filename', 'query_file']
-
-
-class GoogleDataItemDatabase:
-    COL_NAMES = col_names
-    NCOLS = len(col_names)
-    NROWS = int(1e2)
+class GoogleBaseDatabase:
     SCOPE = [
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive',
         ]
     SHARE_SHEETS_WITH = ['tristan.aschwanden@gmail.com']
+    NROWS = int(1e2)
 
     def __init__(self, credential_file, spreadsheet_name):
         print(credential_file, spreadsheet_name)
@@ -96,16 +87,58 @@ class GoogleDataItemDatabase:
         self.open_sheet(name)
         self.spread.add_filter((0, 0))
 
+
+class GoogleOverviewDatabase(GoogleBaseDatabase):
+    COL_NAMES = [
+        'Date', '# File Downloads', 'Variables', 'Models', 'query_file']
+    NCOLS = len(col_names)
+
+    def _get_overview_df_from_dataitems(self, data_items):
+        data = {col: [] for col in self.COL_NAMES}
+        dates = np.unique([x.download_date for x in data_items])
+        for date in dates:
+            tmp_data_items = [
+                x for x in data_items if x.download_date == date]
+            variables = []
+            models = []
+            for data_item in tmp_data_items:
+                metadata = helper.get_metadata_from_filename(
+                    data_item.filename)
+                variables.append(metadata['variable'])
+                models.append(metadata['source_id'])
+            data['Date'] = date.strftime('%d.%m.%Y')
+            data['# File Downloads'] = len(tmp_data_items)
+            data['Variables'] = ','.join(np.unique(variables))
+            data['Models'] = ','.join(np.unique(models))
+            data['query_file'] = tmp_data_items[0].query_file
+        return pd.DataFrame(data, columns=self.COL_NAMES)
+
+    def update_download_overview(self, data_items):
+        sheet_name = 'overview'
+        old_df = self.sheet_to_df(sheet_name)
+        df = self._get_df_from_dataitems(data_items)
+        df_concat = pd.concat([old_df, df])
+        df_concat = df_concat.sort_values(
+            'Date', na_position='first')
+        df_concat = df_concat[list(self.COL_NAMES)]
+        self.df_to_sheet(sheet_name, df_concat)
+
+
+class GoogleDataItemDatabase(GoogleBaseDatabase):
+    COL_NAMES = ['download_date'] + helper.METADATA_FILENAME_LIST + \
+        ['filename', 'query_file']
+    NCOLS = len(col_names)
+
     def _get_df_from_dataitems(self, data_items):
         data = {col: [] for col in self.COL_NAMES}
         for data_item in data_items:
-            tmp = helper.get_metadata_from_filename(data_item.filename)
-            tmp2 = dataclasses.asdict(data_item)
+            metadata = helper.get_metadata_from_filename(data_item.filename)
+            metadata2 = dataclasses.asdict(data_item)
             for col in self.COL_NAMES:
-                if col in tmp.keys():
-                    data[col].append(tmp[col])
-                elif col in tmp2.keys():
-                    data[col].append(tmp2[col])
+                if col in metadata.keys():
+                    data[col].append(metadata[col])
+                elif col in metadata2.keys():
+                    data[col].append(metadata2[col])
                 else:
                     data[col].append(None)
         return pd.DataFrame(data, columns=self.COL_NAMES)

@@ -46,10 +46,13 @@ try:
     from cmip6download import gspread_database
     GSPREAD_DB = gspread_database.GoogleDataItemDatabase(
         CONFIG.google_credentials_file, CONFIG.google_sheet_path)
+    GSPREAD_OVERVIEW_DB = gspread_database.GoogleOverviewDatabase(
+        CONFIG.google_credentials_file, CONFIG.google_sheet_path)
     print(f'Connected to Gspread Database!')
 except Exception as e:
     print(f'Could not connect to Gspread Database! (Exception "{e}")')
     GSPREAD_DB = None
+    GSPREAD_OVERVIEW_DB = None
 
 
 def download_and_verify(i, data_item, reverify_data, return_dict):
@@ -113,10 +116,16 @@ def main():
         # input()
 
         if GSPREAD_DB is not None:
-            GSPREAD_DB.update_dataitems(res)
+            GSPREAD_DB.update_dataitems(data_items)
             print('Saved current status into Gspread Database!')
         else:
             print('Could not save current status into Gspread Database.')
+
+        if GSPREAD_OVERVIEW_DB is not None:
+            GSPREAD_OVERVIEW_DB.update_download_overview(data_items)
+            print('Updated Gspread Overview Database!')
+        else:
+            print('Could not update Gspread Overview Database.')
 
 
 if __name__ == '__main__':

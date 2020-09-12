@@ -103,13 +103,13 @@ def get_local_dir(filename, local_data_dir):
 
 
 def get_metadata_from_filename(filename):
-    tmp = dict(
+    metadata = dict(
         zip(METADATA_FILENAME_LIST,
         filename.split('.')[0].split('_'),
         )
     )
-    tmp['filename'] = filename
-    return tmp
+    metadata['filename'] = filename
+    return metadata
 
 
 def move_files_to_local_dir(files, local_data_dir):
