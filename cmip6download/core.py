@@ -48,6 +48,7 @@ class CMIP6SearchQuery:
     variable: list
     frequency: list = None
     experiment_id: list = None
+    source_id: list = None
     grid_label: list = None
     activity_id: list = None
     member_id: list = None
@@ -112,7 +113,7 @@ class CMIP6SearchQuery:
             'variable', 'frequency', 'experiment_id',
             'grid_label', 'project', 'type', 'replica',
             'latest', 'distrib', 'limit', 'activity_id',
-            'member_id']}
+            'member_id', 'source_id',]}
 
 
 @dataclass

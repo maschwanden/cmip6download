@@ -54,11 +54,15 @@ except Exception as e:
 
 def download_and_verify(i, data_item, reverify_data, return_dict):
     if data_item.verify_download(verify_checksum=reverify_data):
-        print(f'[{i}] Already exists...')
+        print(f'[{i}] Already exists... {data_item.filename}')
     else:
         print(f'[{i}] Download {data_item.file_url}')
-        data_item.download(max_attempts=CONFIG.max_download_attempts)
-        data_item.download_date = datetime.date.today().strftime('%Y-%m-%d')
+        download_status = data_item.download(
+            max_attempts=CONFIG.max_download_attempts)
+        if download_status is not None:
+            data_item.download_date = datetime.date.today().strftime('%Y-%m-%d')
+        else:
+            data_item.download_date = None
     return_dict[i] = data_item
 
 
@@ -95,7 +99,18 @@ def main():
                 [reverify_data]*N_query_data_items,
                 [return_dict]*N_query_data_items))
             p.starmap(download_and_verify, data, chunksize=1)
-            res = return_dict.values()
+            data_items = return_dict.values()
+
+        for data_item in data_items:
+            if data_item.download_date is not None:
+                print(data_item.filename)
+
+
+
+        # # TODO
+        # return data_items
+        # print(res)
+        # input()
 
         if GSPREAD_DB is not None:
             GSPREAD_DB.update_dataitems(res)
@@ -105,4 +120,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    res = main()
