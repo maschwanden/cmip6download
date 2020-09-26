@@ -108,13 +108,6 @@ def main():
             if data_item.download_date is not None:
                 print(data_item.filename)
 
-
-
-        # # TODO
-        # return data_items
-        # print(res)
-        # input()
-
         if GSPREAD_DB is not None:
             GSPREAD_DB.update_dataitems(data_items)
             print('Saved current status into Gspread Database!')

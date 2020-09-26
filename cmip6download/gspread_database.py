@@ -6,6 +6,7 @@ import pprint
 import time
 
 import pandas as pd
+import numpy as np
 import gspread
 import gspread_pandas
 from gspread_pandas import Spread, Client
@@ -58,7 +59,7 @@ class GoogleBaseDatabase:
             self.spread.open_sheet(name)
         except gspread.WorksheetNotFound:
             self.spread.create_sheet(
-                name, rows=self.NROWS, cols=self.NCOLS)
+                name, rows=self.NROWS, cols=len(self.COL_NAMES))
             self._init_sheet(name)
 
     def _init_sheet(self, name):
@@ -91,11 +92,11 @@ class GoogleBaseDatabase:
 class GoogleOverviewDatabase(GoogleBaseDatabase):
     COL_NAMES = [
         'Date', '# File Downloads', 'Variables', 'Models', 'query_file']
-    NCOLS = len(col_names)
 
     def _get_overview_df_from_dataitems(self, data_items):
         data = {col: [] for col in self.COL_NAMES}
-        dates = np.unique([x.download_date for x in data_items])
+        dates = np.unique(
+            [x.download_date for x in data_items if x.download_date])
         for date in dates:
             tmp_data_items = [
                 x for x in data_items if x.download_date == date]
@@ -104,19 +105,19 @@ class GoogleOverviewDatabase(GoogleBaseDatabase):
             for data_item in tmp_data_items:
                 metadata = helper.get_metadata_from_filename(
                     data_item.filename)
-                variables.append(metadata['variable'])
+                variables.append(metadata['variable_id'])
                 models.append(metadata['source_id'])
-            data['Date'] = date.strftime('%d.%m.%Y')
-            data['# File Downloads'] = len(tmp_data_items)
-            data['Variables'] = ','.join(np.unique(variables))
-            data['Models'] = ','.join(np.unique(models))
-            data['query_file'] = tmp_data_items[0].query_file
+            data['Date'].append(date)
+            data['# File Downloads'].append(len(tmp_data_items))
+            data['Variables'].append(','.join(np.unique(variables)))
+            data['Models'].append(','.join(np.unique(models)))
+            data['query_file'].append(tmp_data_items[0].query_file)
         return pd.DataFrame(data, columns=self.COL_NAMES)
 
     def update_download_overview(self, data_items):
         sheet_name = 'overview'
         old_df = self.sheet_to_df(sheet_name)
-        df = self._get_df_from_dataitems(data_items)
+        df = self._get_overview_df_from_dataitems(data_items)
         df_concat = pd.concat([old_df, df])
         df_concat = df_concat.sort_values(
             'Date', na_position='first')
@@ -127,7 +128,6 @@ class GoogleOverviewDatabase(GoogleBaseDatabase):
 class GoogleDataItemDatabase(GoogleBaseDatabase):
     COL_NAMES = ['download_date'] + helper.METADATA_FILENAME_LIST + \
         ['filename', 'query_file']
-    NCOLS = len(col_names)
 
     def _get_df_from_dataitems(self, data_items):
         data = {col: [] for col in self.COL_NAMES}

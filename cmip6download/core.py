@@ -180,7 +180,8 @@ class CMIP6DataItem:
                 self.remote_file_available = False
                 return
         except (requests.exceptions.ConnectionError,
-                requests.exceptions.ReadTimeout) as e:
+                requests.exceptions.ReadTimeout,
+                requests.exceptions.TooManyRedirects) as e:
             logger.warning(f'Failed to retrieve the header (error code {e}).')
             self.remote_file_available = False
             return
@@ -246,7 +247,9 @@ class CMIP6Searcher:
                  if value is not None}
         urlparts = list(urllib.parse.urlparse(base_url))
         urlparts[4] = urllib.parse.urlencode(query)
-        return urllib.parse.urlunparse(urlparts)
+        url = urllib.parse.urlunparse(urlparts)
+        print(url)
+        return url
 
     @classmethod
     def _get_result_tag(cls, base_url, query):
