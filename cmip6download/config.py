@@ -8,7 +8,6 @@ import yaml
 class CMIP6Config:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
-            print(k, v)
             setattr(self, k, v)
 
     def __str__(self):

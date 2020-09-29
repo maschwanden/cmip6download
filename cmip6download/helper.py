@@ -1,7 +1,9 @@
+import re
 from itertools import product
 import hashlib
 import logging
 from pathlib import Path
+import operator
 
 
 LOGGER_LEVEL = logging.INFO
@@ -84,9 +86,25 @@ def remove_tmp_files(base_directory):
 
 
 def dict_product(d):
+    """Expands list dict values to individual dicts.
+
+    Example:
+        >>> list(dict_product({'a': [1, 2, 3], 'b': [6, 9]}))
+        [
+        {'a': 1, 'b' 6}, {'a': 1, 'b' 9}, {'a': 2, 'b' 6},
+        {'a': 2, 'b' 9}, {'a': 3, 'b' 6}, {'a': 3, 'b' 9},
+        ]
+
+    """
     keys = d.keys()
-    for element in product(*d.values()):
-        yield dict(zip(keys, element))
+    values = []
+    for v in d.values():
+        if not isinstance(v, (tuple, list)):
+            values.append([v])
+        else:
+            values.append(v)
+    for prod in product(*values):
+        yield dict(zip(keys, prod))
 
 
 def get_local_dir(filename, local_data_dir):
@@ -128,3 +146,27 @@ def move_files_to_local_dir(files, local_data_dir):
                 shutil.move(str(old_f), str(new_f))
             except FileNotFoundError:
                 logger.warning(f'FileNotFoundError: {old_f}')
+
+
+def sort_member_id_str(member_ids):
+    """Return sorted member_id strings.
+
+    member_id strings like r1i1p1f1 are sorted.
+    r<k>i<l>p<m>f<n>
+    where
+        k = realization_index
+        l = initialization_index
+        m = physics_index
+        n = forcing_index
+    The weighting of the parameters is as follows:
+        k > n > l > m
+
+    """
+    pattern = 'r(\d*)i(\d*)p(\d*)f(\d*)'
+    member_parameters = []
+    for mstr in member_ids:
+        member_parameters.append(
+            [int(x) for x in re.match(pattern, mstr).groups()] + [mstr])
+    member_parameters.sort(
+            key = operator.itemgetter(0, 2, 1, 3))
+    return [m[-1] for m in member_parameters]

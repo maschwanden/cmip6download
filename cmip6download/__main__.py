@@ -30,7 +30,7 @@ parser.add_argument(
 
 
 args = parser.parse_args()
-print(args.query_file, args.config_file)
+# print(args.query_file, args.config_file)
 
 VERIFY = args.verify
 GOSEARCH = args.gosearch
@@ -86,7 +86,7 @@ def main():
 
     searcher = core.CMIP6Searcher(CONFIG)
     for q in reversed(sorted(QUERIES)):
-        query_data_items = searcher.get_data_items(q)
+        query_data_items = searcher.get_data_items(q, CONFIG)
         N_query_data_items = len(query_data_items)
         q.url = searcher.get_request_url(
             CONFIG.cmip6restapi_url, q.as_query_dict())
