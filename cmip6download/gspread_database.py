@@ -12,7 +12,6 @@ import gspread_pandas
 from gspread_pandas import Spread, Client
 from oauth2client.service_account import ServiceAccountCredentials
 
-from cmip6download import core
 from cmip6download import helper
 
 
@@ -127,7 +126,7 @@ class GoogleOverviewDatabase(GoogleBaseDatabase):
 
 class GoogleDataItemDatabase(GoogleBaseDatabase):
     COL_NAMES = ['download_date'] + helper.METADATA_FILENAME_LIST + \
-        ['filename', 'query_file']
+        ['filename', 'query_file', 'cmip6_api_search_call']
 
     def _get_df_from_dataitems(self, data_items):
         data = {col: [] for col in self.COL_NAMES}
@@ -143,15 +142,35 @@ class GoogleDataItemDatabase(GoogleBaseDatabase):
                     data[col].append(None)
         return pd.DataFrame(data, columns=self.COL_NAMES)
 
-    def update_dataitems(self, data_items):
+    def update_dataitems(
+            self, data_items, sorting_column='download_date'):
         df = self._get_df_from_dataitems(data_items)
+        print(df.head(3))
         for name in df['variable_id'].unique():
             df_subset = df[df['variable_id'] == name]
             old_df = self.sheet_to_df(name)
             df_concat = pd.concat([old_df, df_subset])
             df_concat = df_concat.sort_values(
-                'download_date', na_position='first')
+                sorting_column, na_position='first')
             df_concat = df_concat.drop_duplicates(
                 subset='filename', keep='last')
             df_concat = df_concat[list(self.COL_NAMES)]
             self.df_to_sheet(name, df_concat)
+
+
+class GoogleFailedDataItemDatabase(GoogleDataItemDatabase):
+    COL_NAMES = ['fail_date'] + helper.METADATA_FILENAME_LIST + \
+        ['filename',
+         'query_file',
+         'cmip6_api_search_call',
+         '_used_download_urls',
+         ]
+
+    def update_dataitems(self, *args, **kwargs):
+        kwargs['sorting_column'] = 'fail_date'
+        return super().update_dataitems(*args, **kwargs)
+
+    def _get_df_from_dataitems(self, data_items):
+        df = super()._get_df_from_dataitems(data_items)
+        df['failed_date'] = datetime.datetime.now()
+        return df

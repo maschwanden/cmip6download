@@ -1,3 +1,4 @@
+import datetime
 from pathlib import Path
 from dataclasses import field, dataclass
 import requests
@@ -23,6 +24,7 @@ class BaseDataItem:
 
     download_date: str = None
     download_successfull: bool = None
+    _used_download_urls: list = None
 
     @property
     def local_file(self):
@@ -47,8 +49,8 @@ class BaseDataItem:
         try:
             self._remote_file_available
         except AttributeError:
-            # NOTTODO excecute _check_file_availability to set _remote_file_available
             self._remote_file_available = self._check_file_availability()
+        return self._remote_file_available
 
     def verify_download(self, verify_checksum=False):
         """Check if file was downloaded and optionally compare checksum."""
@@ -64,7 +66,7 @@ class BaseDataItem:
         return verified
 
     def _check_file_availability(self):
-        """Make a HTTP HEAD request to check if the file is available.
+        """Check if the remote file is available (by HTTP HEAD request).
 
         Returns:
             available (bool): If the HTTP HEAD request is sucessfull
@@ -105,6 +107,8 @@ class BaseDataItem:
     def download(
             self, max_attempts=1, attempt=1, reverify_checksum=False,
             redownload=False):
+        if self._used_download_urls is None:
+            self._used_download_urls = []
         if redownload:
             pass
         elif self.verify_download(verify_checksum=reverify_checksum):
@@ -114,6 +118,7 @@ class BaseDataItem:
         self.local_dir.mkdir(exist_ok=True, parents=True)
 
         try:
+            self._used_download_urls.append(self.file_url)
             if self.remote_file_available:
                 self._http_get()
         except (requests.HTTPError, requests.exceptions.ConnectionError,
@@ -139,7 +144,11 @@ class BaseDataItem:
             logger.warning(f'Failed. Exceeded max number of attempts.')
 
 
+@dataclass(unsafe_hash=True)
 class CMIP6DataItem(BaseDataItem):
+    cmip6_api_search_call: str = None
+    query_file: str = None
+
     @property
     def metadata(self):
         return helper.get_metadata_from_filename(self.filename)

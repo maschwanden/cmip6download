@@ -162,6 +162,7 @@ def sort_member_id_str(member_ids):
         k > n > l > m
 
     """
+    print(member_ids)
     pattern = 'r(\d*)i(\d*)p(\d*)f(\d*)'
     member_parameters = []
     for mstr in member_ids:
