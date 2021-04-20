@@ -36,7 +36,7 @@ class BaseAPIQuery:
             for k in query.keys():
                 if k not in keys:
                     raise ValueError(
-                        f'Configuration Error: unknwon key {k} in query '
+                        f'Configuration Error: unknown key {k} in query '
                         f'file {yaml_file}')
             queries.extend(list({
                 cls(**kwargs) for kwargs in list(helper.dict_product(query))
