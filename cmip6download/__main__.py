@@ -12,6 +12,7 @@ from cmip6download.config import CMIP6Config
 from cmip6download.data_item import CMIP6DataItem
 from cmip6download.query import CMIP6APIQuery
 from cmip6download.searcher import CMIP6APISearcher
+from cmip6download import progress_logging
 
 
 parser = argparse.ArgumentParser(description='Download CMIP6.')
@@ -40,21 +41,6 @@ if args.config_file is not None:
 CONFIG = CMIP6Config.create_from_yaml(CONFIG_FILE)
 QUERY_FILE = Path(args.query_file)
 QUERIES = CMIP6APIQuery.create_from_yaml(QUERY_FILE)
-
-try:
-    from cmip6download import gspread_database
-    GSPREAD_DB = gspread_database.GoogleDataItemDatabase(
-        CONFIG.google_credentials_file, CONFIG.google_sheet_path)
-    GSPREAD_OVERVIEW_DB = gspread_database.GoogleOverviewDatabase(
-        CONFIG.google_credentials_file, CONFIG.google_sheet_path)
-    GSPREAD_FAILED_DB = gspread_database.GoogleFailedDataItemDatabase(
-        CONFIG.google_credentials_file, CONFIG.google_sheet_path+'_failed')
-    print(f'Connected to Gspread Database!')
-except Exception as e:
-    print(f'Could not connect to Gspread Database! (Exception "{e}")')
-    GSPREAD_DB = None
-    GSPREAD_OVERVIEW_DB = None
-    GSPREAD_FAILED_DB = None
 
 
 def download_and_verify(i, data_item, reverify_data, return_dict):
@@ -94,6 +80,7 @@ if __name__ == '__main__':
         CONFIG.cmip6restapi_url, CONFIG.base_data_dir)
 
     all_failed_data_items = []
+    all_data_items = []
 
     # If in the config the min_number_of_members is set the following
     # happens:
@@ -178,19 +165,12 @@ if __name__ == '__main__':
             print('----------------------------------------------')
 
         all_failed_data_items.extend(failed_data_items)
-
-        if GSPREAD_DB is not None and len(data_items):
-            GSPREAD_DB.update_dataitems(data_items)
-            print('Saved current status into Gspread Database!')
-        if GSPREAD_OVERVIEW_DB is not None and len(data_items):
-            GSPREAD_OVERVIEW_DB.update_download_overview(data_items)
-            print('Updated Gspread OVERVIEW Database!')
+        all_data_items.extend(data_items)
 
     print(f'A total of {len(all_failed_data_items)} downloads failed.')
-    print('The following files could not be downloaded:')
-    for data_item in all_failed_data_items:
-        print(f'> {data_item.filename}')
+    if len(all_failed_data_items):
+        print('The following files could not be downloaded:')
+        for data_item in all_failed_data_items:
+            print(f'> {data_item.filename}')
 
-    if GSPREAD_FAILED_DB is not None and len(all_failed_data_items):
-        GSPREAD_FAILED_DB.update_dataitems(all_failed_data_items)
-        print('Updated Gspread FAILED Database!')
+    progress_logging.log_download_progress(CONFIG, all_data_items)

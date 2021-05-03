@@ -76,34 +76,60 @@ class CMIP6APISearcher(BaseAPISearcher):
         """
         if filter_kwargs is None:
             filter_kwargs = {}
-        data_items = self._get_temporary_data_items(query)
+        data_items = self.get_result_data_items(query)
         n_data_items0 = len(data_items)
-        logger.info(f'{n_data_items0} files found.')
         data_items = self._filter_data_items(data_items, query, **filter_kwargs)
-        if len(data_items) != n_data_items0:
-            logger.info(f'-> {len(data_items)} after filtering/extending found.')
-        else:
-            logger.info(f'-> Nothing changed due to filtering/extending!!!')
-        return data_items
 
-    def _get_temporary_data_items(self, query):
+        # Next: Combine all data items into a single DataItem instance
+        # which only contain replica urls of each other.
+        filename_data_item_dict = {}
+        for di in data_items:
+            try:
+                filename_data_item_dict[di.filename].append(di)
+            except KeyError:
+                filename_data_item_dict[di.filename] = []
+        replica_combined_data_items = []
+        for filename, dis in filename_data_item_dict.items():
+            di = dis[0]
+            if len(dis) > 1: 
+                for i in range(1, len(dis)):
+                    di.file_urls.extend(dis[i].file_urls)
+            replica_combined_data_items.append(di)
+
+        logger.debug(
+            f'{n_data_items0} raw (incl. replicas) files and '
+            f'{len(replica_combined_data_items)} data files found.')
+        return replica_combined_data_items
+
+    def get_result_data_items(self, query):
         """Return data items directly from an API call using query.
 
-        These data items can then later be filtered/extended.
+        These data items are a python representation of ALL `result`
+        xml tags in the API response. These "raw" data items are then 
+        further filtered/extended/altered.
+
         """
         try:
             url = self.get_request_url(query)
             http_request = requests.get(
                 url, timeout=HTTP_BASE_TIMEOUT_TIME,
+                allow_redirects=True, verify=False,
                 )
+            print(url)
         except requests.exceptions.ReadTimeout as e:
             logger.warning(f'Could not get list of downloadable files ({e}).')
+        except Exception as e:
+            print(
+                f'The following exception was raised while '
+                f'accessing the URL {url}: {e}.')
+            raise
+
         result_tag = BeautifulSoup(http_request.text, 'lxml').result
         doc_tags = result_tag.find_all('doc')
-        return [self._get_data_item_from_doctag(doc_tag)
-            for doc_tag in doc_tags]
+        return [
+            self._get_result_data_item_from_doctag(d) for d in doc_tags]
 
-    def _get_data_item_from_doctag(self, doc_tag):
+    def _get_result_data_item_from_doctag(self, doc_tag):
         filename = str(doc_tag.find('str', attrs={'name': 'title'}).string)
         remote_checksum = str(doc_tag.find(
             'arr', attrs={'name': 'checksum'}).str.string)
@@ -122,7 +148,7 @@ class CMIP6APISearcher(BaseAPISearcher):
                 'Could not find any download URL for file {filename}')
         return CMIP6DataItem(
             filename=filename,
-            file_url=file_url,
+            file_urls=[file_url],
             remote_checksum=remote_checksum,
             remote_checksum_type=remote_checksum_type,
             local_base_dir=self.base_data_dir,
@@ -135,7 +161,7 @@ class CMIP6APISearcher(BaseAPISearcher):
                 members per model is limited to this number.
 
         """
-        filtered_data_items_set = set(data_items)
+        filtered_data_items = data_items
 
         unq_models = list({
             d.metadata['source_id'] for d in data_items
@@ -146,7 +172,7 @@ class CMIP6APISearcher(BaseAPISearcher):
             all_model_data_items = []
             for model in unq_models:
                 model_data_items = [
-                    d for d in filtered_data_items_set
+                    d for d in filtered_data_items
                     if d.metadata['source_id'] == model]
                 unq_members = list({
                     d.metadata['member_id'] for d in model_data_items
@@ -169,9 +195,9 @@ class CMIP6APISearcher(BaseAPISearcher):
                         f'{len(unq_members)} -> {len(unq_members)}.')
 
                 all_model_data_items.extend(model_data_items)
-            filtered_data_items_set = set(all_model_data_items)
+            filtered_data_items = all_model_data_items
 
         # More filtering could come here
         # .....
 
-        return list(filtered_data_items_set)
+        return filtered_data_items

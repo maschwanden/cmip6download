@@ -60,10 +60,11 @@ class CMIP6APIQuery(BaseAPIQuery):
     grid_label: str = None
     activity_id: str = None
     member_id: str = None
+    realm: str = None
 
     project: str = 'CMIP6'
     type: str = 'File'
-    replica: bool = False
+    replica: bool = True
     latest: bool = None
     distrib: bool = None
     limit: int = 10000

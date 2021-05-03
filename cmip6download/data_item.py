@@ -18,13 +18,16 @@ REQUESTS_CHUNK_SIZE = 128 * 1024
 class BaseDataItem:
     filename: str
     local_base_dir: Path
-    file_url: str
+    file_urls: list
     remote_checksum: str
     remote_checksum_type: str
 
     download_date: str = None
     download_successfull: bool = None
     _used_download_urls: list = None
+
+    def __post_init__(self):
+        self._file_url = None
 
     @property
     def local_file(self):
@@ -45,12 +48,21 @@ class BaseDataItem:
         return helper.get_local_dir(self.filename, self.local_base_dir)
 
     @property
-    def remote_file_available(self):
-        try:
-            self._remote_file_available
-        except AttributeError:
-            self._remote_file_available = self._check_file_availability()
-        return self._remote_file_available
+    def file_url(self):
+        if self._file_url is None:
+            for fu in self.file_urls:
+                try:
+                    head = requests.head(
+                        fu, allow_redirects=True, verify=False,
+                        timeout=HTTP_HEAD_TIMEOUT_TIME)
+                    if head.status_code == 200:
+                        self._file_url = fu
+                except:
+                    pass
+            if self._file_url is None:
+                logger.debug(f'No file URL is available!')
+                self._file_url = False
+        return self._file_url
 
     def verify_download(self, verify_checksum=False):
         """Check if file was downloaded and optionally compare checksum."""
@@ -64,29 +76,6 @@ class BaseDataItem:
             logger.debug(f'File does not exist locally.')
             verified = False
         return verified
-
-    def _check_file_availability(self):
-        """Check if the remote file is available (by HTTP HEAD request).
-
-        Returns:
-            available (bool): If the HTTP HEAD request is sucessfull
-                (returns status code 200) True is returned, otherwise
-                False.
-
-        """
-        try:
-            head = requests.head(
-                self.file_url, allow_redirects=True, verify=False,
-                timeout=HTTP_HEAD_TIMEOUT_TIME)
-            if head.status_code != 200:
-                raise requests.exceptions.ConnectionError(
-                    'Status code is not 200.')
-        except (requests.exceptions.ConnectionError,
-                requests.exceptions.ReadTimeout,
-                requests.exceptions.TooManyRedirects) as e:
-            logger.warning(f'Failed to retrieve the header (error code {e}).')
-            return False
-        return True
 
     def _http_get(self):
         """Make HTTP request for this data item and store it locally."""
@@ -102,11 +91,16 @@ class BaseDataItem:
                             break
                         f.write(chunk)
             except requests.exceptions.ChunkedEncodingError as e:
-                logger.warning(f'Could not finish download of {self.file_url} ({e})')
+                logger.warning(
+                    f'Could not finish download of {self.file_url} ({e})')
 
     def download(
             self, max_attempts=1, attempt=1, reverify_checksum=False,
             redownload=False):
+        """
+        High level download method that also checks if it is neccessary 
+        to download the file again etc.
+        """
         if self._used_download_urls is None:
             self._used_download_urls = []
         if redownload:
@@ -119,7 +113,7 @@ class BaseDataItem:
 
         try:
             self._used_download_urls.append(self.file_url)
-            if self.remote_file_available:
+            if self.file_url:
                 self._http_get()
         except (requests.HTTPError, requests.exceptions.ConnectionError,
                 requests.exceptions.ReadTimeout) as e:

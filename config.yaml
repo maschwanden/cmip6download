@@ -1,17 +1,16 @@
 # Base CMIP6 search API URL
-cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
+#cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
+cmip6restapi_url: http://esgf-index1.ceda.ac.uk/esg-search/search
+
 # Directory where all downloaded data is stored
-base_data_dir: /export/data/model_data/cmip6
+base_data_dir: /export/data/aschwanden/testtest_cmip6
 
 # Number of download attempts before the download is aborted.
 max_download_attempts: 1
 # Number of parallel downloads
 n_worker: 10
 
-# Google credentials file
-google_credentials_file: /home/aschwanden/.config/cmip6download/gcreds.json
-# Google calc sheet name
-google_sheet_path: cmip6download_status
+progress_logging_directory: /home/aschwanden/.local/share/cmip6download/progress
 
 # Minimum number of members. If no members are found, a new
 # search is conducted with no members specified. From
