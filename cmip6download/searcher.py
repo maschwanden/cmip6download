@@ -87,7 +87,7 @@ class CMIP6APISearcher(BaseAPISearcher):
             try:
                 filename_data_item_dict[di.filename].append(di)
             except KeyError:
-                filename_data_item_dict[di.filename] = []
+                filename_data_item_dict[di.filename] = [di]
         replica_combined_data_items = []
         for filename, dis in filename_data_item_dict.items():
             di = dis[0]
