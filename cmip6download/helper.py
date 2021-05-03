@@ -126,6 +126,9 @@ def get_metadata_from_filename(filename):
         filename.split('.')[0].split('_'),
         )
     )
+    if not metadata['member_id'].startswith('r'):
+        print(filename)
+        print(metadata)
     metadata['filename'] = filename
     return metadata
 
@@ -166,8 +169,11 @@ def sort_member_id_str(member_ids):
     pattern = 'r(\d*)i(\d*)p(\d*)f(\d*)'
     member_parameters = []
     for mstr in member_ids:
+        rxixpxfx = mstr
+        if '-' in rxixpxfx:
+            rxixpxfx = mstr.split('-')[-1]
         member_parameters.append(
-            [int(x) for x in re.match(pattern, mstr).groups()] + [mstr])
+            [int(x) for x in re.match(pattern, rxixpxfx).groups()] + [mstr])
     member_parameters.sort(
-            key = operator.itemgetter(0, 2, 1, 3))
+        key = operator.itemgetter(0, 2, 1, 3))
     return [m[-1] for m in member_parameters]
