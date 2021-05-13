@@ -118,6 +118,13 @@ if __name__ == '__main__':
     else:
         print('min_number_of_members was not set.')
 
+    add_queries2 = []
+    for query in all_queries:
+        query = copy.deepcopy(query)
+        query.replica = ~query.replica
+        add_queries2.append(query)
+    all_queries.extend(add_queries2)
+
     # If max_number_of_members is set,
     # data_item_filter_kwargs["max_number_of_members"] is set to
     # max_number_of_members.

@@ -64,7 +64,7 @@ class CMIP6APIQuery(BaseAPIQuery):
 
     project: str = 'CMIP6'
     type: str = 'File'
-    replica: bool = True
+    replica: bool = False
     latest: bool = None
     distrib: bool = None
     limit: int = 10000
