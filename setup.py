@@ -17,6 +17,7 @@ setuptools.setup(
     ],
     install_requires=[
         'numpy',
+        'pandas',
         'requests',
         'PyYAML',
         'beautifulsoup4',
