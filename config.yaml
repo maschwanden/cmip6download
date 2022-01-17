@@ -1,9 +1,10 @@
 # Base CMIP6 search API URL
 #cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
-cmip6restapi_url: http://esgf-index1.ceda.ac.uk/esg-search/search
+# cmip6restapi_url: http://esgf-index1.ceda.ac.uk/esg-search/search
+cmip6restapi_url: https://esgf-node.llnl.gov/esg-search/search
 
 # Directory where all downloaded data is stored
-base_data_dir: /export/data/aschwanden/testtest_cmip6
+base_data_dir: /export/data/aschwanden/test_for_froelicher
 
 # Number of download attempts before the download is aborted.
 max_download_attempts: 1

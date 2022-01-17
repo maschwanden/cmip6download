@@ -121,7 +121,6 @@ if __name__ == '__main__':
     add_queries2 = []
     for query in all_queries:
         query = copy.deepcopy(query)
-        query.replica = ~query.replica
         add_queries2.append(query)
     all_queries.extend(add_queries2)
 

@@ -111,11 +111,11 @@ class CMIP6APISearcher(BaseAPISearcher):
         """
         try:
             url = self.get_request_url(query)
+            print(f'API CALL: {url}')
             http_request = requests.get(
                 url, timeout=HTTP_BASE_TIMEOUT_TIME,
                 allow_redirects=True, verify=False,
                 )
-            print(url)
         except requests.exceptions.ReadTimeout as e:
             logger.warning(f'Could not get list of downloadable files ({e}).')
         except Exception as e:

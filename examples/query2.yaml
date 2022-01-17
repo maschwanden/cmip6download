@@ -5,13 +5,13 @@
 # Block 1
 #########
 
-- variable: 
-    - areacello 
+- variable:
+    - areacello
   frequency:  
-    - mon
+    - fx
   experiment_id:
     - 1pctCO2
-  grid_label: 
+  grid_label:
     - gn
   realm:
     - ocean

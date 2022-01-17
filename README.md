@@ -26,6 +26,8 @@ of filtering arguments which are then used to request data files from ESGF nodes
 Thus a block can be thought of as one call to the [CMIP6 data search interface](https://esgf-node.llnl.gov/search/cmip6/).
 Each filtering argument given to a block filters narrows down the search results.
 
+For further information have a look at this documentation of arguments of the [ESGF CMIP6 REST API](https://rdrr.io/cran/epwshiftr/man/esgf_query.html).
+
 Here is an example query file ([`examples/query1.yaml`]):
 ```
 #########
@@ -99,7 +101,7 @@ We use the example query file 2 (query2.yaml from the examples directory):
 - variable:
     - areacello
   frequency:  
-    - mon
+    - fx
   experiment_id:
     - 1pctCO2
   grid_label:
@@ -115,9 +117,9 @@ This should then result in the following search result:
 The search has resulted in a single file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`.
 This file could now be directly download by clicking on the "HTTP Download" link.
 
-Now we download this file using *cmip6_download*:
-`python -m cmip6download REPOSITORY_DIR/examples/query2.yaml`
-REPOSITORY_DIR is the directory where you stored the src code.
+Now we download this file using *cmip6_download* (while being in the src directory):
+`python -m cmip6download --gosearch --noverify examples/query2.yaml`
+This will download the file and store it as: `BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc` (where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
 
 ## CONFIG_FILE
 The config file specifies some global options:
