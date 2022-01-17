@@ -1,0 +1,19 @@
+# Configuration of Search query for CMIP6 downloads
+# frequency can be 1hr, 1hrCM, 3hr, 3hrPt, 6hr, 6hrPt, day, dec, fx, mon, monC, monPt, subhrPt, yr, yrPt
+#
+#########
+# Block 1
+#########
+
+- variable: 
+    - areacello 
+  frequency:  
+    - mon
+  experiment_id:
+    - 1pctCO2
+  grid_label: 
+    - gn
+  realm:
+    - ocean
+  source_id:
+    - MIROC6

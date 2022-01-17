@@ -5,13 +5,12 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cmip6download",
-    version="0.0.1",
+    version="0.1.0",
     author="Mathias Aschwanden",
     author_email="mathias.aschwanden@gmail.com",
-    description="Tools to simplify data download of CMIP6 data",
+    description="Download tool for CMIP6 data",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    #url="https://github.com/pypa/sampleproject",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
