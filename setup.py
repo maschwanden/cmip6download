@@ -16,6 +16,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
     ],
     install_requires=[
+        'numpy',
         'requests',
         'PyYAML',
         'beautifulsoup4',

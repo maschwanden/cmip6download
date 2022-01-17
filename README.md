@@ -14,7 +14,10 @@ The data which has to be downloaded is specifed using a YAML file. Example YAML 
 After the module has been installed it can be called using
 `python -m cmip6download OPTIONS QUERY_FILE`, where all available arguments for OPTIONS
 are listed [below](#CONFIG_FILE) and QUERY_FILE is a path to a YAML file containing information
-which data should be downloaded (see [here](#QUERY_FILE))
+which data should be downloaded (see [here](#QUERY_FILE)).
+
+Here are some example calls:
+1. `python -m cmip6download REPOSITORY_DIR/examples/query2.yaml`: The single file found by this query (`areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`) is downloaded. The user has to specify whether all previously downloaded files should be verified again or not, and he also has to confirm the download (see [Options](#Options) on how to automate this).
 
 ## QUERY_FILE
 The query file is a YAML file specifying which data should be downloaded.
