@@ -1,5 +1,24 @@
-cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
-base_data_dir: /export/data/model_data/cmip6
+# Base CMIP6 search API URL
+#cmip6restapi_url: http://esg-dn1.nsc.liu.se/esg-search/search
+# cmip6restapi_url: http://esgf-index1.ceda.ac.uk/esg-search/search
+cmip6restapi_url: https://esgf-node.llnl.gov/esg-search/search
 
+# Directory where all downloaded data is stored
+base_data_dir: /export/data/aschwanden/cmip6
+
+# Number of download attempts before the download is aborted.
 max_download_attempts: 1
+# Number of parallel downloads
 n_worker: 10
+
+progress_logging_directory: /home/aschwanden/.local/share/cmip6download/progress
+
+# Minimum number of members. If no members are found, a new
+# search is conducted with no members specified. From
+# all the found members from this search the first X 
+# members are downloaded.
+min_number_of_members: 1
+
+# Maximum number of members. If more members are found only 
+# the first X members are downloaded.
+max_number_of_members: 2

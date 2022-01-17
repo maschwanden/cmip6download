@@ -8,7 +8,7 @@ The data which has to be downloaded is specifed using a YAML file. Example YAML 
 2. Install the module using `pip install .` (while you are in the src directory; there should be a `setup.py` file in it)
 3. Copy the config file from `examples/config1.yaml` to `~/.config/cmip6download/config.yaml`.
 4. Open the config file `~/.config/cmip6download/config.yaml` and set base_data_dir accordingly
-(this is the directory where all the CMIP6 data will be downloaded into).
+(this is the directory where all the CMIP6 data will be downloaded into). Additionally also set `progress_logging_directory` to a writable directory.
 
 ## Usage
 After the module has been installed it can be called using
@@ -117,17 +117,9 @@ This should then result in the following search result:
 The search has resulted in a single file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`.
 This file could now be directly download by clicking on the "HTTP Download" link.
 
-Now we download this file using *cmip6_download* (while being in the src directory):
+Now we download this file using *cmip6_download* (while being in the src directory): `python -m cmip6download --gosearch --noverify examples/query2.yaml`
 
-```
-python -m cmip6download --gosearch --noverify examples/query2.yaml
-```
-
-This will download the file and store it as:
-
-```
-BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc
-```
+This will download the file and store it as: `BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`
 
 where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
 
@@ -139,6 +131,10 @@ The config file specifies some global options:
 be not available.
 - n_worker: Number of allowed parallel downloads. If set to 10, ten files will be downloaded
 in parallel.
+- progress_logging_directory: Directory where logging information can be written.
+- min_number_of_members: Minimum number of members. If no members are found, a new search is conducted with no members specified. From all the found members from this search the first X members are downloaded.
+- max_number_of_members: Maximum number of members. If more members are found only the first X members are downloaded.
+
 
 The only option in the config file which MUST BE set by the user is the `base_data_dir`.
 
