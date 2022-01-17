@@ -118,9 +118,11 @@ The search has resulted in a single file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_
 This file could now be directly download by clicking on the "HTTP Download" link.
 
 Now we download this file using *cmip6_download* (while being in the src directory):
+
 ```
 python -m cmip6download --gosearch --noverify examples/query2.yaml
 ```
+
 This will download the file and store it as:
 
 ```
@@ -142,6 +144,7 @@ The only option in the config file which MUST BE set by the user is the `base_da
 
 ## Options
 All the options are given using the "flag syntax". Thus they are provided as follows:
+
 ```
 python -m cmip6download --OPTION1 --OPTION2 QUERY_FILE
 ```
