@@ -118,8 +118,14 @@ The search has resulted in a single file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_
 This file could now be directly download by clicking on the "HTTP Download" link.
 
 Now we download this file using *cmip6_download* (while being in the src directory):
-`python -m cmip6download --gosearch --noverify examples/query2.yaml`
-This will download the file and store it as: `BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc` (where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
+```
+python -m cmip6download --gosearch --noverify examples/query2.yaml
+```
+This will download the file and store it as:
+```
+BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc
+```
+where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
 
 ## CONFIG_FILE
 The config file specifies some global options:
@@ -137,8 +143,10 @@ All the options are given using the "flag syntax". Thus they are provided as fol
 ```
 python -m cmip6download --OPTION1 --OPTION2 QUERY_FILE
 ```
+
 All options except `config_file` are boolean flags (thus no values has to be provided).
 The `config_file` option has to be used as follows:
+
 ```
 python -m cmip6download --config_file=/path/to/config/file QUERY_FILE
 ```
