@@ -16,8 +16,27 @@ After the module has been installed it can be called using
 are listed [below](#CONFIG_FILE) and QUERY_FILE is a path to a YAML file containing information
 which data should be downloaded (see [here](#QUERY_FILE)).
 
-Here are some example calls:
-1. `python -m cmip6download REPOSITORY_DIR/examples/query2.yaml`: The single file found by this query (`areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`) is downloaded. The user has to specify whether all previously downloaded files should be verified again or not, and he also has to confirm the download (see [Options](#Options) on how to automate this).
+### Example 1
+
+Now we download the file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc` using `cmip6_download` (while being in the src directory):
+```
+python -m cmip6download --gosearch --noverify examples/query2.yaml
+```
+This will download the file and store it as:
+```
+BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc
+```
+
+where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
+
+Now let's check whether cmip6_download finds the same data as a manual call to the
+CMIP6 data search interface (hereafter called DSI).
+
+Open the DSI and manually select all the filtering options specified in the query file.
+This should then result in the following search result:
+![ESGF node search result](esgf_node_search.png)
+The search result is identical to what `cmip6download` has found!
+This file could now be directly download by clicking on the "HTTP Download" link.
 
 ## QUERY_FILE
 The query file is a YAML file specifying which data should be downloaded.
@@ -88,40 +107,7 @@ Finally, the priority is set to 80.
 When cmip6download is called with this query file, first the grid areas ("areacella",
 "areacello", and "volcello") and in a second step, the chemical variables will be downloaded).
 
-### Check using the [CMIP6 data search interface](https://esgf-node.llnl.gov/search/cmip6/).
-Now let's check whether cmip6_download finds the same data as a manual call to the
-CMIP6 data search interface (hereafter called DSI).
 
-We use the example query file 2 (query2.yaml from the examples directory):
-```
-#########
-# Block 1
-#########
-
-- variable:
-    - areacello
-  frequency:  
-    - fx
-  experiment_id:
-    - 1pctCO2
-  grid_label:
-    - gn
-  realm:
-    - ocean
-  source_id:
-    - MIROC6
-```
-First open the DSI and manually select all the filtering options specified in the query file.
-This should then result in the following search result:
-![ESGF node search result](esgf_node_search.png)
-The search has resulted in a single file `areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`.
-This file could now be directly download by clicking on the "HTTP Download" link.
-
-Now we download this file using *cmip6_download* (while being in the src directory): `python -m cmip6download --gosearch --noverify examples/query2.yaml`
-
-This will download the file and store it as: `BASE_DATA_DIR/areacello/Ofx/1pctCO2/MIROC6/r1i1p1f1/gn/areacello_Ofx_MIROC6_1pctCO2_r1i1p1f1_gn.nc`
-
-where BASE_DATA_DIR is the directory specified in the config file (`~/.config/cmip6download/config.yaml`).
 
 ## CONFIG_FILE
 The config file specifies some global options:
